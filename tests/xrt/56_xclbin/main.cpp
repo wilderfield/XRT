@@ -111,26 +111,62 @@ run(int argc, char** argv)
   if (xclbin_fnm.empty())
     throw std::runtime_error("FAILED_TEST\nNo xclbin specified");
 
-  auto xclbin = xrt::xclbin(xclbin_fnm); // C++ API, construct xclbin object from filename
+  // Construct xclbin from fnm
+  auto xclbin = xrt::xclbin(xclbin_fnm);
 
-  std::vector<std::string> cu_names = xclbin.get_cu_names();
- 
-  for (auto& cu : cu_names)
-    std::cout << cu << " ";
-  std::cout << std::endl;
+  std::cout << "Xclbin: " << xclbin_fnm << std::endl;
+  
+  // Exercise get_xsa_name()
+  std::cout << "  XSAName: " << xclbin.get_xsa_name() << std::endl;
+  
+  // Exercise get_uuid()
+  std::cout << "  UUID: " << xclbin.get_uuid().to_string() << std::endl;
 
-  if (cu_names[0] != "simple:simple_1")
-    throw std::runtime_error("FAILED_TEST\nCould not read correct kernel name, expected: simple:simple_1");
+  // Exercise kernel APIs */
+  for (auto& kernel : xclbin.get_kernels()) {
+    std::cout << "  Kernel: " << kernel.get_name() << std::endl;
+    // Exercise kernel argument APIs */
+    for (auto& karg : kernel.get_args()) {
+      std::cout << "    Kernel Argument: " << karg.get_name() << std::endl;
+    }
+    // Exercise cu APIs */
+    for (auto& cu :kernel.get_cus()) {
+      std::cout << "    ComputeUnit: " << cu.get_name() << std::endl;
+      std::cout << "      BaseAddress: " << "0x" << std::hex << cu.get_base_address() << std::endl;
+      // Exercise cu argument APIs */
+      for (auto& carg : cu.get_args()) {
+        std::cout << "    CU Argument: " << carg.get_name() << std::endl;
+        // Exercise mem APIs */
+        for (auto& mem: carg.get_mems()) {
+          std::cout << "      ConnectedMemory: " << mem.get_name() << std::endl;
+          std::cout << "        BaseAddress: " << "0x" << std::hex << mem.get_base_address() << std::endl;
+          std::cout << "        Size: " << mem.get_size() << std::endl;
+          std::cout << "        Used: " << unsigned(mem.get_used()) << std::endl;
+          std::cout << "        Type: " << unsigned(mem.get_type()) << std::endl;
+          std::cout << "        Index: " << mem.get_index() << std::endl;
+        }
+      }
+    }
+  }
 
-  std::vector<char> data = xclbin.get_data();
-  for(int i = 0; i < 7; ++i)
-    std::cout << data[i] << " ";
-  std::cout << std::endl;
+  // Can print object
+  // std::cout << xclbin << std::endl;
+
+  std::string cu_name = xclbin.get_kernels(0).get_name() + ":" + xclbin.get_kernels(0).get_cus(0).get_name();
 
   auto device = xrt::device(device_index);
-  auto uuid = device.load_xclbin(xclbin);
 
-  run(device, uuid, cu_names[0]);
+  // Exercise device.get_xclbin()
+  auto device_xclbin = device.get_xclbin();
+
+  std::cout << device_xclbin << std::endl;
+
+  auto uuid = device.load_xclbin(xclbin);
+  auto luuid = device.get_xclbin_uuid();
+  if (uuid != luuid)
+    throw std::runtime_error("FAILED_TEST\nDevice does not have the correct xclbin loaded");
+
+  run(device, uuid, cu_name);
   return 0;
 }
 
