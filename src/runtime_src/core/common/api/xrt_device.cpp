@@ -135,17 +135,17 @@ uuid
 device::
 load_xclbin(const std::string& fnm)
 {
-  auto xclbin = read_xclbin(fnm);
-  auto top = reinterpret_cast<const axlf*>(xclbin.data());
-  return load_xclbin(top);
+  xrt::xclbin xclbin(fnm);
+  load_xclbin(xclbin);
+  return xclbin.get_uuid();
 }
 
 uuid
 device::
 load_xclbin(const xclbin& xclbin)
 {
-  auto top = reinterpret_cast<const axlf*>(xclbin.get_data().data());
-  return load_xclbin(top);
+  handle->load_xclbin(reinterpret_cast<const axlf*>(xclbin.get_data().data()));
+  return xclbin.get_uuid();
 }
 
 uuid
@@ -153,6 +153,13 @@ device::
 get_xclbin_uuid() const
 {
   return handle->get_xclbin_uuid();
+}
+
+xrt::xclbin
+device::
+get_xclbin() const
+{
+  return handle->get_xclbin();
 }
 
 device::

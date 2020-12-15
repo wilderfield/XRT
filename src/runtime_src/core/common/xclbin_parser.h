@@ -275,6 +275,15 @@ std::vector<kernel_object>
 get_kernels(const axlf* top);
 
 /**
+ * get_kernels() - Get meta data for all kernels
+ *
+ * Return: List of struct kernel_object
+ */
+XRT_CORE_COMMON_EXPORT
+std::vector<kernel_object>
+get_kernels(const char* xml_data, size_t xml_size);
+
+/**
  * is_pdi_only() - If the xclbin has only one section and is PDI
  */
 XRT_CORE_COMMON_EXPORT

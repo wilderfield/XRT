@@ -661,20 +661,26 @@ get_kernel_arguments(const axlf* top, const std::string& kname)
 }
 
 std::vector<kernel_object>
-get_kernels(const axlf* top)
+get_kernels(const char* xml_data, size_t xml_size)
 {
-  auto xml = get_xml_section(top);
   std::vector<kernel_object> kernels;
 
-  auto knames = get_kernel_names(xml.first, xml.second);
+  auto knames = get_kernel_names(xml_data, xml_size);
   for (auto& kname : knames) {
     kernels.emplace_back(kernel_object{
        kname
-      ,get_kernel_arguments(xml.first, xml.second, kname)
+      ,get_kernel_arguments(xml_data, xml_size, kname)
     });
   }
 
   return kernels;
+}
+
+std::vector<kernel_object>
+get_kernels(const axlf* top)
+{
+  auto xml = get_xml_section(top);
+  return get_kernels(xml.first,xml.second);
 }
 
 // PDI only XCLBIN has PDI section only;

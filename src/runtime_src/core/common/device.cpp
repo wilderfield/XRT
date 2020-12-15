@@ -22,6 +22,7 @@
 #include "query_requests.h"
 #include "config_reader.h"
 #include "xclbin_parser.h"
+#include "core/common/api/xclbin_int.h"
 #include "core/include/xrt.h"
 #include "core/include/xclbin.h"
 #include "core/include/ert.h"
@@ -29,6 +30,14 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+
+namespace {
+  const std::vector<axlf_section_kind> kinds =
+    { EMBEDDED_METADATA, AIE_METADATA, IP_LAYOUT, CONNECTIVITY,
+      ASK_GROUP_CONNECTIVITY, ASK_GROUP_TOPOLOGY,
+      MEM_TOPOLOGY, DEBUG_IP_LAYOUT, SYSTEM_METADATA, CLOCK_FREQ_TOPOLOGY
+    };
+}
 
 namespace xrt_core {
 
@@ -79,47 +88,40 @@ get_xclbin_uuid() const
   return uuid();
 }
 
+// This API constructs and returns an xclbin object
+// The object is more limited in scope versus the usual xclbin
+// It is constructed by quering the device driver for available cached content
+// The device driver sparsely caches xclbin content
+xrt::xclbin
+device::
+get_xclbin() const
+{
+  return xrt_core::xclbin_int::create_xclbin(this, kinds);
+}
+
 void
 device::
 register_axlf(const axlf* top)
 {
-  m_axlf_sections.clear();
-  m_xclbin_uuid = uuid(top->m_header.uuid);
-  axlf_section_kind kinds[] = {EMBEDDED_METADATA, AIE_METADATA, IP_LAYOUT, CONNECTIVITY, 
-                               ASK_GROUP_CONNECTIVITY, ASK_GROUP_TOPOLOGY, 
-                               MEM_TOPOLOGY, DEBUG_IP_LAYOUT, SYSTEM_METADATA, CLOCK_FREQ_TOPOLOGY};
-  for (auto kind : kinds) {
-    auto hdr = xrt_core::xclbin::get_axlf_section(top, kind);
-
-    if (!hdr)
-      continue;
-
-    auto section_data = reinterpret_cast<const char*>(top) + hdr->m_sectionOffset;
-    std::vector<char> data{section_data, section_data + hdr->m_sectionSize};
-    m_axlf_sections.emplace(kind , std::move(data));
-  }
+  m_xclbin = xrt_core::xclbin_int::create_xclbin(top,kinds);
 }
 
 std::pair<const char*, size_t>
 device::
 get_axlf_section(axlf_section_kind section, const uuid& xclbin_id) const
 {
-  if (xclbin_id && xclbin_id != m_xclbin_uuid)
-    throw std::runtime_error("xclbin id mismatch");
-  auto itr = m_axlf_sections.find(section);
-  return itr != m_axlf_sections.end()
-    ? std::make_pair((*itr).second.data(), (*itr).second.size())
-    : std::make_pair(nullptr, 0);
+  if (m_xclbin.get_handle())
+    return ::xrt_core::xclbin_int::get_axlf_section(m_xclbin, section, xclbin_id);
+  return {nullptr,0};
 }
 
 std::pair<const char*, size_t>
 device::
 get_axlf_section_or_error(axlf_section_kind section, const uuid& xclbin_id) const
 {
-  auto ret = get_axlf_section(section, xclbin_id);
-  if (ret.first != nullptr)
-    return ret;
-  throw std::runtime_error("no such xclbin section");
+  if (m_xclbin.get_handle())
+    return ::xrt_core::xclbin_int::get_axlf_section_or_error(m_xclbin, section, xclbin_id);
+  throw std::runtime_error("device's xclbin is uninitialized");
 }
 
 std::pair<size_t, size_t>

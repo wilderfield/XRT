@@ -34,6 +34,7 @@
 #include <boost/any.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/optional/optional.hpp>
+#include <core/include/experimental/xrt_xclbin.h>
 
 #define XILINX_ID  0x10ee
 #define ARISTA_ID  0x3475
@@ -144,6 +145,14 @@ public:
   lookup_query(query::key_type query_key) const = 0;
 
 public:
+  /**
+   * get_xclbin() - Get xclbin object loaded on device
+   *
+   * Return:       xclbin object loaded on device
+   */
+  xrt::xclbin
+  get_xclbin() const;
+
   /**
    * query() - Query the device for specific property
    *
@@ -298,8 +307,7 @@ public:
   mutable boost::optional<bool> m_nodma = boost::none;
 
   // cache xclbin meta data loaded by this process
-  uuid m_xclbin_uuid;
-  std::map<axlf_section_kind, std::vector<char>> m_axlf_sections;
+  xrt::xclbin m_xclbin;
 };
 
 /**

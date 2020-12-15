@@ -193,6 +193,19 @@ public:
     return reinterpret_cast<SectionType>(get_xclbin_section(section, uuid).first);
   }
 
+  /**
+   * get_xclbin() - Get xclbin object from driver
+   *
+   * Return:       xclbin object representing what was loaded to device
+   *
+   * Note that the xclbin object consists of sections cached by 
+   * the device driver
+
+   */
+  XCL_DRIVER_DLLESPEC
+  xrt::xclbin
+  get_xclbin() const;
+
 public:
   /// @cond
   /**
